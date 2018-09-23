@@ -12,11 +12,15 @@
   remote_user: root
   roles:
     - prepare
+  tags:
+    - prepare
 
 - name: Install sql database
   hosts: controller
   remote_user: root
   roles:
+    - sqldb
+  tags:
     - sqldb
 
 - name: Install rabbitmq
@@ -24,11 +28,15 @@
   remote_user: root
   roles:
     - rabbitmq
+  tags:
+    - rabbitmq
 
 - name: Install memcache
   hosts: controller
   remote_user: root
   roles:
+    - memcache
+  tags:
     - memcache
 
 - name: Install etcd
@@ -36,11 +44,15 @@
   remote_user: root
   roles:
     - etcd
+  tags:
+    - etcd
 
 - name: Install keystone
   hosts: controller
   remote_user: root
   roles:
+    - keystone
+  tags:
     - keystone
 
 - name: Install glance
@@ -48,11 +60,15 @@
   remote_user: root
   roles:
     - glance
+  tags:
+    - glance
 
 - name: Install nova on controller
   hosts: controller
   remote_user: root
   roles:
+    - nova_controller
+  tags:
     - nova_controller
 
 - name: Install nova on compute
@@ -60,11 +76,15 @@
   remote_user: root
   roles:
     - nova_compute
+  tags:
+    - nova_compute
 
 - name: Discover compute hosts
   hosts: controller
   remote_user: root
   roles:
+    - discover_compute
+  tags:
     - discover_compute
 
 - name: Install neutron on controller
@@ -72,11 +92,15 @@
   remote_user: root
   roles:
     - neutron_controller
+  tags:
+    - neutron_controller
 
 - name: Install neutron on compute
   hosts: com_hosts
   remote_user: root
   roles:
+    - neutron_compute
+  tags:
     - neutron_compute
 
 - name: Install horizon
@@ -84,17 +108,23 @@
   remote_user: root
   roles:
     - horizon
+  tags:
+    - horizon
 
 - name: Install cinder on controller
   hosts: controller
   remote_user: root
   roles:
     - cinder_controller
+  tags:
+    - cinder_controller
 
 - name: Install cinder on storage
   hosts: controller
   remote_user: root
   roles:
+    - cinder_storage
+  tags:
     - cinder_storage
 
 - name: Inform the installer
