@@ -1,0 +1,60 @@
+---
+
+- name: Create keystone database
+  mysql_db:
+    name: keystone
+    state: present
+
+- name: Create keystone user for mysql
+  mysql_user:
+    name: keystone
+    password: '{{ ansible_ssh_pass }}'
+    priv: "keystone.*:ALL,GRANT"
+
+- name: Install packages
+  yum:
+    name: '{{ item }}'
+    state: latest
+  with_items:
+    - keystone
+    - apache2
+    - libapache2-mod-wsgi
+
+- name: Configure /etc/keystone/keystone.conf
+  ini_file:
+    path: /etc/keystone/keystone.conf
+    section: '{{ item.section }}'
+    option: '{{ item.option }}'
+    value: '{{ item.value }}'
+  with_items:
+    - { section: database, option: connection, value: 'mysql+pymysql://keystone:{{ ansible_ssh_pass }}@controller/keystone' }
+    - { section: token, option: provider, value: fernet }
+
+- name: Populate the Identity service database
+  command: keystone-manage db_sync
+  become: yes
+  become: keystone
+
+- include: setup_key.yml
+
+- name: Bootstrap the identity service
+  command: |
+    keystone-manage bootstrap --bootstrap-password {{ ansible_ssh_pass }} \
+      --bootstrap-admin-url http://controller:5000/v3/ \
+      --bootstrap-internal-url http://controller:5000/v3/ \
+      --bootstrap-public-url http://controller:5000/v3/ \
+      --bootstrap-region-id RegionOne
+
+- name: Configure ServerName in /etc/apache2/apache2.conf
+  lineinfile:
+    dest: /etc/httpd/conf/httpd.conf
+    line: "ServerName controller"
+    state: present
+
+- name: Start apache2 service
+  service:
+    name: apache2
+    enabled: yes
+    state: restarted
+
+- include: create_user_service.yml

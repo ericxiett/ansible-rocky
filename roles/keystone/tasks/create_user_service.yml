@@ -1,0 +1,43 @@
+---
+
+- name: Create the service project
+  os_project:
+    cloud: rocky-own
+    state: present
+    name: ‘{{ item.name }}’
+    description: '{{ item.desc }}'
+    domain_id: default
+    enabled: True
+  with_items:
+    - { name: service, desc: "Service Project" }
+    - { name: myproject, desc: "Demo Project" }
+
+- name: Create myuser
+  os_user:
+    cloud: rocky-own
+    state: present
+    name: myuser
+    password: myuser
+    domain: default
+    default_project: myproject
+
+- name: Create myrole
+  os_keystone_role:
+    cloud: rocky-own
+    state: present
+    name: myrole
+
+- name: Add the myrole role to the myproject project and myuser user
+  os_user_role:
+    cloud: rocky-own
+    user: myuser
+    role: myrole
+    project: myproject
+
+- name: Generate rc files
+  template:
+    src: '{{ item.src }}'
+    dest: /root/{{ item.dest }}
+  with_items:
+    - { src: admin-openrc.j2, dest: admin-openrc }
+    - { src: demo-openrc.j2, dest: demo-openrc }

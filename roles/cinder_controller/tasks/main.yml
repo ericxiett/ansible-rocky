@@ -1,0 +1,117 @@
+---
+
+- name: Create cinder database
+  mysql_db:
+    name: cinder
+    state: present
+
+- name: Create cinder user for mysql
+  mysql_user:
+    name: cinder
+    password: '{{ ansible_ssh_pass }}'
+    priv: "cinder.*:ALL,GRANT"
+
+- name: Create user in keystone
+  os_user:
+    cloud: rocky-own
+    state: present
+    name: cinder
+    password: '{{ ansible_ssh_pass }}'
+    domain: default
+    default_project: service
+
+- name: Add the admin role to the cinder user and service project
+  os_user_role:
+    cloud: rocky-own
+    user: cinder
+    role: admin
+    project: service
+
+- name: Create the cinder v2/v3 service entity
+  os_keystone_service:
+    cloud: rocky-own
+    state: present
+    name: '{{ item.name }}'
+    service_type: '{{ item.type }}'
+    description: OpenStack Block Storage Service
+  with_items:
+    - { name: cinderv2, type: volumev2 }
+    - { name: cinderv3, type: volumev3 }
+
+- name: Create cinder v2 endpoints
+  os_keystone_endpoint:
+    cloud: rocky-own
+    state: present
+    service: cinderv2
+    endpoint_interface: '{{ item }}'
+    url: http://controller:8776/v2/%\(project_id\)s
+    region: RegionOne
+  with_items:
+    - public
+    - admin
+    - internal
+
+- name: Create cinder v3 endpoints
+  os_keystone_endpoint:
+    cloud: rocky-own
+    state: present
+    service: cinderv3
+    endpoint_interface: '{{ item }}'
+    url: http://controller:8776/v3/%\(project_id\)s
+    region: RegionOne
+  with_items:
+    - public
+    - admin
+    - internal
+
+- name: Install cinder packages
+  apt:
+    name: '{{ item }}'
+    state: latest
+  with_items:
+    - cinder-api
+    - cinder-scheduler
+
+- name: Config cinder.conf
+  ini_file:
+    path: /etc/cinder/cinder.conf
+    section: '{{ item.section }}'
+    option: '{{ item.option }}'
+    value: '{{ item.value }}'
+  with_items:
+    - { section: database, option: connection, value: 'mysql+pymysql://cinder:{{ ansible_ssh_pass }}@controller/cinder' }
+    - { section: DEFAULT, option: transport_url, value: 'rabbit://openstack:{{ ansible_ssh_pass }}@controller' }
+    - { section: DEFAULT, option: auth_strategy, value: keystone }
+    - { section: keystone_authtoken, option: www_authenticate_uri, value: 'http://controller:5000' }
+    - { section: keystone_authtoken, option: auth_url, value: 'http://controller:5000' }
+    - { section: keystone_authtoken, option: memcached_servers, value: 'controller:11211' }
+    - { section: keystone_authtoken, option: auth_type, value: password }
+    - { section: keystone_authtoken, option: project_domain_id, value: default }
+    - { section: keystone_authtoken, option: user_domain_id, value: default }
+    - { section: keystone_authtoken, option: project_name, value: service }
+    - { section: keystone_authtoken, option: username, value: cinder }
+    - { section: keystone_authtoken, option: password, value: '{{ ansible_ssh_pass }}' }
+    - { section: DEFAULT, option: my_ip, value: '{{ ansible_host }}' }
+    - { section: oslo_concurrency, option: lock_path, value: '/var/lib/cinder/tmp' }
+
+- name: Populate the Block Storage database
+  command: su -s /bin/sh -c "cinder-manage db sync" cinder
+
+- name: Config nova.conf
+  ini_file:
+    path: /etc/nova/nova.conf
+    section: '{{ item.section }}'
+    option: '{{ item.option }}'
+    value: '{{ item.value }}'
+  with_items:
+    - { section: cinder, option: os_region_name, value: RegionOne }
+
+- name: Restart nova/cinder services
+  service:
+    name: '{{ item }}'
+    enabled: yes
+    state: restarted
+  with_items:
+    - nova-api
+    - cinder-scheduler
+    - apache2

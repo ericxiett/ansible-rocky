@@ -1,0 +1,56 @@
+---
+
+- name: Install supporting utility packages
+  apt:
+    name: '{{ name }}'
+    state: latest
+  with_items:
+    - lvm2
+    - thin-provisioning-tools
+
+- name: Create cinder-volumes vg
+  lvg:
+    vg: cinder-volumes
+    pvs: /dev/vdb
+
+- name: Install cinder packages
+  apt:
+    name: cinder-volume
+    state: latest
+
+- name: Config cinder.conf
+  ini_file:
+    path: /etc/cinder/cinder.conf
+    section: '{{ item.section }}'
+    option: '{{ item.option }}'
+    value: '{{ item.value }}'
+  with_items:
+    - { section: database, option: connection, value: 'mysql+pymysql://cinder:{{ ansible_ssh_pass }}@controller/cinder' }
+    - { section: DEFAULT, option: transport_url, value: 'rabbit://openstack:{{ ansible_ssh_pass }}@controller' }
+    - { section: DEFAULT, option: auth_strategy, value: keystone }
+    - { section: keystone_authtoken, option: auth_uri, value: 'http://controller:5000' }
+    - { section: keystone_authtoken, option: auth_url, value: 'http://controller:5000' }
+    - { section: keystone_authtoken, option: memcached_servers, value: 'controller:11211' }
+    - { section: keystone_authtoken, option: auth_type, value: password }
+    - { section: keystone_authtoken, option: project_domain_id, value: default }
+    - { section: keystone_authtoken, option: user_domain_id, value: default }
+    - { section: keystone_authtoken, option: project_name, value: service }
+    - { section: keystone_authtoken, option: username, value: cinder }
+    - { section: keystone_authtoken, option: password, value: '{{ ansible_ssh_pass }}' }
+    - { section: DEFAULT, option: my_ip, value: '{{ ansible_host }}' }
+    - { section: DEFAULT, option: enabled_backends, value: lvm }
+    - { section: lvm, option: volume_driver, value: 'cinder.volume.drivers.lvm.LVMVolumeDriver' }
+    - { section: lvm, option: volume_group, value: cinder-volumes }
+    - { section: lvm, option: iscsi_protocol, value: iscsi }
+    - { section: lvm, option: iscsi_helper, value: tgtadm }
+    - { section: DEFAULT, option: glance_api_servers, value: 'http://controller:9292' }
+    - { section: oslo_concurrency, option: lock_path, value: '/var/lib/cinder/tmp' }
+
+- name: Restart cinder-volume services
+  service:
+    name: '{{ item }}'
+    enabled: yes
+    state: restarted
+  with_items:
+    - tgt
+    - cinder-volume

@@ -1,0 +1,20 @@
+---
+
+- name: Install openstack-dashboard package
+  apt:
+    name: openstack-dashboard
+    state: latest
+
+- name: Config /etc/openstack-dashboard/local_settings.py
+  template:
+    src: local_setting.py
+    dest: /etc/openstack-dashboard/local_settings.py
+
+- name: Add the following line to /etc/apache2/conf-available/openstack-dashboard.conf if not included
+  lineinfile:
+    path: /etc/apache2/conf-available/openstack-dashboard.conf
+    regexp: 'WSGIApplicationGroup %{GLOBAL}'
+    line: 'WSGIApplicationGroup %{GLOBAL}'
+
+- name: Reload the web server configuration
+  command: service apache2 reload

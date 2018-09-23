@@ -1,0 +1,107 @@
+---
+
+- name: Get start timestamp
+  hosts: deploy
+  connection: local
+  tasks:
+    - set_fact:
+        starttime: "{{ ansible_date_time }}"
+
+- name: Prepare env
+  hosts: cloud
+  remote_user: root
+  roles:
+    - prepare
+
+- name: Install sql database
+  hosts: controller
+  remote_user: root
+  roles:
+    - sqldb
+
+- name: Install rabbitmq
+  hosts: controller
+  remote_user: root
+  roles:
+    - rabbitmq
+
+- name: Install memcache
+  hosts: controller
+  remote_user: root
+  roles:
+    - memcache
+
+- name: Install etcd
+  hosts: controller
+  remote_user: root
+  roles:
+    - etcd
+
+- name: Install keystone
+  hosts: controller
+  remote_user: root
+  roles:
+    - keystone
+
+- name: Install glance
+  hosts: controller
+  remote_user: root
+  roles:
+    - glance
+
+- name: Install nova on controller
+  hosts: controller
+  remote_user: root
+  roles:
+    - nova_controller
+
+- name: Install nova on compute
+  hosts: com_hosts
+  remote_user: root
+  roles:
+    - nova_compute
+
+- name: Discover compute hosts
+  hosts: controller
+  remote_user: root
+  roles:
+    - discover_compute
+
+- name: Install neutron on controller
+  hosts: controller
+  remote_user: root
+  roles:
+    - neutron_controller
+
+- name: Install neutron on compute
+  hosts: com_hosts
+  remote_user: root
+  roles:
+    - neutron_compute
+
+- name: Install horizon
+  hosts: controller
+  remote_user: root
+  roles:
+    - horizon
+
+- name: Install cinder on controller
+  hosts: controller
+  remote_user: root
+  roles:
+    - cinder_controller
+
+- name: Install cinder on storage
+  hosts: controller
+  remote_user: root
+  roles:
+    - cinder_storage
+
+- name: Inform the installer
+  hosts: deploy
+  connection: local
+  tasks:
+    - debug:
+        msg: >-
+          The deploy started at {{ hostvars.deploy.starttime.time }},
+          ended at {{ ansible_date_time.time }}

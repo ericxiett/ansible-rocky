@@ -1,0 +1,159 @@
+---
+
+- name: Create databases
+  mysql_db:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - nova_api
+    - nova
+    - nova_cell0
+    - placement
+
+- name: Create nova user for mysql
+  mysql_user:
+    name: nova
+    password: '{{ ansible_ssh_pass }}'
+    priv: "{{ item }}.*:ALL,GRANT"
+  with_items:
+    - nova_api
+    - nova
+    - nova_cell0
+    - placement
+
+- name: Create nova user in keystone
+  os_user:
+    cloud: rocky-own
+    state: present
+    name: '{{ item }}'
+    password: '{{ ansible_ssh_pass }}'
+    domain: default
+    default_project: service
+  with_items:
+    - nova
+    - placement
+
+- name: Add the admin role to the nova user and service project
+  os_user_role:
+    cloud: rocky-own
+    user: '{{ item }}'
+    role: admin
+    project: service
+  with_items:
+    - nova
+    - placement
+
+- name: Create the nova service entity
+  os_keystone_service:
+    cloud: rocky-own
+    state: present
+    name: nova
+    service_type: compute
+    description: OpenStack Compute Service
+
+- name: Create nova API endpoint
+  os_keystone_endpoint:
+    cloud: rocky-own
+    state: present
+    service: nova
+    endpoint_interface: '{{ item }}'
+    url: http://controller:8774/v2.1
+    region: RegionOne
+  with_items:
+    - public
+    - admin
+    - internal
+
+- name: Create placement API endpoint
+  os_keystone_endpoint:
+    cloud: rocky-own
+    state: present
+    service: placement
+    endpoint_interface: '{{ item }}'
+    url: http://controller:8778
+    region: RegionOne
+  with_items:
+    - public
+    - admin
+    - internal
+
+- name: Install nova packages
+  apt:
+    name: '{{ item }}'
+    state: latest
+  with_items:
+    - nova-api
+    - nova-conductor
+    - nova-novncproxy
+    - nova-scheduler
+    - nova-placement-api
+
+- name: Config nova.conf
+  ini_file:
+    path: /etc/nova/nova.conf
+    section: '{{ item.section }}'
+    option: '{{ item.option }}'
+    value: '{{ item.value }}'
+  with_items:
+    - { section: api_database, option: connection, value: 'mysql+pymysql://nova:{{ ansible_ssh_pass }}@controller/nova_api' }
+    - { section: database, option: connection, value: 'mysql+pymysql://nova:{{ ansible_ssh_pass }}@controller/nova' }
+    - { section: placement_database, option: connection, value: 'mysql+pymysql://nova:{{ ansible_ssh_pass }}@controller/placement' }
+    - { section: DEFAULT, option: transport_url, value: 'rabbit://openstack:{{ ansible_ssh_pass }}@controller' }
+    - { section: api, option: auth_strategy, value: keystone }
+    - { section: keystone_authtoken, option: auth_url, value: 'http://controller:5000/v3' }
+    - { section: keystone_authtoken, option: memcached_servers, value: 'controller:11211' }
+    - { section: keystone_authtoken, option: auth_type, value: password }
+    - { section: keystone_authtoken, option: project_domain_name, value: Default }
+    - { section: keystone_authtoken, option: user_domain_name, value: Default }
+    - { section: keystone_authtoken, option: project_name, value: service }
+    - { section: keystone_authtoken, option: username, value: nova }
+    - { section: keystone_authtoken, option: password, value: '{{ ansible_ssh_pass }}' }
+    - { section: DEFAULT, option: my_ip, value: '{{ ansible_host }}' }
+    - { section: DEFAULT, option: use_neutron, value: True }
+    - { section: DEFAULT, option: firewall_driver, value: 'nova.virt.firewall.NoopFirewallDriver' }
+    - { section: vnc, option: enabled, value: true }
+    - { section: vnc, option: server_listen, value: '$my_ip' }
+    - { section: vnc, option: server_proxyclient_address, value: '$my_ip' }
+    - { section: glance, option: api_servers, value: 'http://controller:9292' }
+    - { section: oslo_concurrency, option: lock_path, value: '/var/lib/nova/tmp' }
+    - { section: placement, option: region_name, value: RegionOne }
+    - { section: placement, option: project_domain_name, value: Default }
+    - { section: placement, option: user_domain_name, value: Default }
+    - { section: placement, option: project_name, value: service }
+    - { section: placement, option: username, value: placement }
+    - { section: placement, option: password, value: '{{ ansible_ssh_pass }}' }
+    - { section: placement, option: auth_type, value: password }
+    - { section: placement, option: auth_url, value: 'http://controller:5000/v3' }
+    - { section: scheduler, option: discover_hosts_in_cells_interval, value: 300 }
+
+- name: Remove configurations
+  ini_file:
+    path: /etc/nova/nova.conf
+    state: absent
+    section: '{{ item.section }}'
+    option: '{{ item.option }}'
+  with_items:
+    - { section: DEFAULT, option: log_dir }
+
+- name: Populate the nova-api and placement databases
+  command: su -s /bin/sh -c "nova-manage api_db sync" nova
+
+- name: Register the cell0 database
+  command: su -s /bin/sh -c "nova-manage cell_v2 map_cell0" nova
+
+- name: Create the cell1 cell
+  command: su -s /bin/sh -c "nova-manage cell_v2 create_cell --name=cell1 --verbose" nova
+
+- name: Populate the nova database
+  command: su -s /bin/sh -c "nova-manage db sync" nova
+
+- name: Restart the Compute services
+  service:
+    name: '{{ item }}'
+    enabled: yes
+    state: restarted
+  with_items:
+    - nova-api
+    - nova-scheduler
+    - nova-conductor
+    - nova-novncproxy

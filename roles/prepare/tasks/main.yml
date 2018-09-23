@@ -1,0 +1,51 @@
+---
+
+- name: Add dns records in /etc/hosts
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      {{ item.ip }} {{ item.name }}
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.name }}"
+    with_items:
+    - { name: controller, ip: 172.23.61.11 }
+    - { name: compute01, ip: 172.23.61.12 }
+    - { name: compute02, ip: 172.23.61.13 }
+
+- name: Install chrony
+  apt:
+    name: chrony
+    state: latest
+    update_cache: yes
+
+- name: Config ntp server in /etc/chrony/chrony.conf
+  blockinfile:
+    path: /etc/chrony/chrony.conf
+    block: |
+      server 172.23.61.7 iburst
+
+- name: Remove online ntp server
+  lineinfile:
+    path: /etc/chrony/chrony.conf
+    regexp: '^pool *'
+    line: '#pool 2.debian.pool.ntp.org offline iburst'
+
+- name: Start chrony service
+  service:
+    name: chrony
+    enabled: yes
+    state: restarted
+
+- name: Install software-properties-common
+  apt:
+    name: software-properties-common
+    state: latest
+
+- name: Add rocky repository
+  apt_repository:
+    repo: cloud-archive:rocky
+
+- name: Install openstackclient
+  apt:
+    name: python-openstackclient
+    state: latest
+    update_cache: yes

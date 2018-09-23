@@ -1,0 +1,42 @@
+---
+
+- name: Check if fernet keys already exist
+  stat:
+    path: /etc/keystone/fernet-keys/0
+  register: _fernet_keys
+
+- name: Create fernet keys
+  command: keystone-manage fernet_setup --keystone-user keystone  --keystone-group keystone
+  become: yes
+  become_user: keystone
+  when: not _fernet_keys.stat.exists
+
+- name: Rotate fernet keys for Keystone
+  command: keystone-manage fernet_rotate --keystone-user keystone  --keystone-group keystone
+  become: yes
+  become_user: keystone
+  when: _fernet_keys.stat.exists
+
+- name: Check if credential keys already exist
+  stat:
+    path: /etc/keystone/credential-keys/0
+  register: _credential_keys
+
+- name: Create credential keys for Keystone
+  command: keystone-manage credential_setup --keystone-user keystone  --keystone-group keystone
+  become: yes
+  become_user: keystone
+  register: create_credential_keys
+  when: not _credential_keys.stat.exists
+
+- name: Ensure newest key is used for credential in Keystone
+  command: keystone-manage credential_migrate --keystone-user keystone  --keystone-group keystone
+  become: yes
+  become_user: keystone
+  when: create_credential_keys | skipped
+
+- name: Rotate credential keys for Keystone
+  command: keystone-manage credential_rotate --keystone-user keystone  --keystone-group keystone
+  become: yes
+  become_user: keystone-
+  when: create_credential_keys | skipped

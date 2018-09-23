@@ -1,0 +1,22 @@
+---
+
+- name: Install memcached packages
+  apt:
+    name: '{{ item }}'
+    state: latest
+  with_items:
+    - memcached
+    - python-memcached
+
+- name: Configure memcached service to use management IP
+  lineinfile:
+    path: /etc/sysconfig/memcached
+    regexp: '^OPTIONS="-l 127.0.0.1,::1"'
+    line: 'OPTIONS="-l 127.0.0.1,::1,{{ ansible_host }}"'
+    state: present
+
+- name: Start memcached service
+  service:
+    name: memcached
+    state: started
+    enabled: yes

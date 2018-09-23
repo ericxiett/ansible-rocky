@@ -1,0 +1,108 @@
+---
+
+- name: Create glance database
+  mysql_db:
+    name: glance
+    state: present
+
+- name: Create glance user for mysql
+  mysql_user:
+    name: glance
+    password: '{{ ansible_ssh_pass }}'
+    priv: "glance.*:ALL,GRANT"
+
+- name: Create user in keystone
+  os_user:
+    cloud: rocky-own
+    state: present
+    name: glance
+    password: '{{ ansible_ssh_pass }}'
+    domain: default
+    default_project: service
+
+- name: Add the admin role to the glance user and service project
+  os_user_role:
+    cloud: rocky-own
+    user: glance
+    role: admin
+    project: service
+
+- name: Create the glance service entity
+  os_keystone_service:
+    cloud: rocky-own
+    state: present
+    name: glance
+    service_type: image
+    description: OpenStack Image Service
+
+- name: Create glance API endpoint
+  os_keystone_endpoint:
+    cloud: rocky-own
+    state: present
+    service: glance
+    endpoint_interface: '{{ item }}'
+    url: http://controller:9292
+    region: RegionOne
+  with_items:
+    - public
+    - admin
+    - internal
+
+- name: Install glance
+  apt:
+    name: glance
+    state: latest
+    update_cache: yes
+
+- name: Config glance-api.conf
+  ini_file:
+    path: /etc/glance/glance-api.conf
+    section: '{{ item.section }}'
+    option: '{{ item.option }}'
+    value: '{{ item.value }}'
+  with_items:
+    - { section: database, option: connection, value: 'mysql+pymysql://glance:{{ ansible_ssh_pass }}@controller/glance' }
+    - { section: keystone_authtoken, option: www_authenticate_uri, value: 'http://controller:5000' }
+    - { section: keystone_authtoken, option: auth_url, value: 'http://controller:5000' }
+    - { section: keystone_authtoken, option: memcached_servers, value: 'controller:11211' }
+    - { section: keystone_authtoken, option: auth_type, value: password }
+    - { section: keystone_authtoken, option: project_domain_name, value: Default }
+    - { section: keystone_authtoken, option: user_domain_name, value: Default }
+    - { section: keystone_authtoken, option: project_name, value: service }
+    - { section: keystone_authtoken, option: username, value: glance }
+    - { section: keystone_authtoken, option: password, value: '{{ ansible_ssh_pass }}' }
+    - { section: paste_deploy, option: flavor, value: keystone }
+    - { section: glance_store, option: stores, value: 'file,http' }
+    - { section: glance_store, option: default_store, value: file }
+    - { section: glance_store, option: filesystem_store_datadir, value: '/var/lib/glance/images/' }
+
+- name: Config glance-registry.conf
+  ini_file:
+    path: /etc/glance/glance-registry.conf
+    section: '{{ item.section }}'
+    option: '{{ item.option }}'
+    value: '{{ item.value }}'
+  with_items:
+    - { section: database, option: connection, value: 'mysql+pymysql://glance:{{ ansible_ssh_pass }}@controller/glance' }
+    - { section: keystone_authtoken, option: www_authenticate_uri, value: 'http://controller:5000' }
+    - { section: keystone_authtoken, option: auth_url, value: 'http://controller:5000' }
+    - { section: keystone_authtoken, option: memcached_servers, value: 'controller:11211' }
+    - { section: keystone_authtoken, option: auth_type, value: password }
+    - { section: keystone_authtoken, option: project_domain_name, value: Default }
+    - { section: keystone_authtoken, option: user_domain_name, value: Default }
+    - { section: keystone_authtoken, option: project_name, value: service }
+    - { section: keystone_authtoken, option: username, value: glance }
+    - { section: keystone_authtoken, option: password, value: '{{ ansible_ssh_pass }}' }
+    - { section: paste_deploy, option: flavor, value: keystone }
+
+- name: Populate the Image service database
+  command: su -s /bin/sh -c "glance-manage db_sync" glance
+
+- name: Restart the Image services
+  service:
+    name: '{{ item }}'
+    enabled: yes
+    state: restarted
+  with_items:
+    - glance-api
+    - glance-registry
