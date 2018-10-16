@@ -1,15 +1,14 @@
 ---
-
-- name: Add dns records in /etc/hosts
-  blockinfile:
-    path: /etc/hosts
-    block: |
-      {{ item.ip }} {{ item.name }}
-    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.name }}"
-    with_items:
-    - { name: controller, ip: 172.23.61.11 }
-    - { name: compute01, ip: 172.23.61.12 }
-    - { name: compute02, ip: 172.23.61.13 }
+#- name: Add dns records in /etc/hosts
+#  blockinfile:
+#    path: /etc/hosts
+#    block: |
+#      "{{ item.ip }}" "{{ item.name }}"
+#    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.name }}"
+#    with_items:
+#    - { name: controller, ip: 192.168.20.20 }
+#    - { name: compute01, ip: 192.168.20.13 }
+#    - { name: compute02, ip: 192.168.20.22 }
 
 - name: Install chrony
   apt:
@@ -21,7 +20,7 @@
   blockinfile:
     path: /etc/chrony/chrony.conf
     block: |
-      server 172.23.61.7 iburst
+      server 192.168.20.20  iburst
 
 - name: Remove online ntp server
   lineinfile:
@@ -40,9 +39,10 @@
     name: software-properties-common
     state: latest
 
-- name: Add rocky repository
+- name: Add queens repository
   apt_repository:
-    repo: cloud-archive:rocky
+    #repo: cloud-archive:queens
+    repo: "deb http://ubuntu-cloud.archive.canonical.com/ubuntu xenial-updates/queens main"
 
 - name: Install openstackclient
   apt:

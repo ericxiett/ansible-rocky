@@ -8,7 +8,7 @@
   with_items:
     - mariadb-server
     - python-pymysql
-
+    - python-mysqldb
 - name: Create openstack db conf
   template:
     src: 99-openstack.cnf.j2

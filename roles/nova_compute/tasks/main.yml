@@ -39,7 +39,8 @@
     - { section: placement, option: password, value: '{{ ansible_ssh_pass }}' }
     - { section: placement, option: auth_type, value: password }
     - { section: placement, option: auth_url, value: 'http://controller:5000/v3' }
-
+    - { section: libvirt, option: cpu_mode, value: 'none' }
+    - { section: libvirt, option: virt_type, value: 'qemu' }
 - name: Remove configurations
   ini_file:
     path: /etc/nova/nova.conf
