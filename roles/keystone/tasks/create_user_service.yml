@@ -4,7 +4,7 @@
   os_project:
     cloud: rocky-own
     state: present
-    name: ‘{{ item.name }}’
+    name: '{{ item.name }}'
     description: '{{ item.desc }}'
     domain_id: default
     enabled: True
