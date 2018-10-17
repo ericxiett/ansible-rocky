@@ -9,6 +9,7 @@
   mysql_user:
     name: glance
     password: '{{ ansible_ssh_pass }}'
+    host: "%"
     priv: "glance.*:ALL,GRANT"
 
 - name: Create user in keystone

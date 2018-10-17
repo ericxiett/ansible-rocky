@@ -38,5 +38,5 @@
 - name: Rotate credential keys for Keystone
   command: keystone-manage credential_rotate --keystone-user keystone  --keystone-group keystone
   become: yes
-  become_user: keystone-
+  become_user: keystone
   when: create_credential_keys | skipped

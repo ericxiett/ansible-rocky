@@ -15,7 +15,7 @@
 - name: Add the openstack user
   rabbitmq_user:
     user: openstack
-    password: '{{ password }}'
+    password: '{{ ansible_ssh_pass }}'
     vhost: /
     configure_priv: .*
     read_priv: .*

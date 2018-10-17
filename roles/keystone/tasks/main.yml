@@ -9,6 +9,7 @@
   mysql_user:
     name: keystone
     password: '{{ ansible_ssh_pass }}'
+    host: "%"
     priv: "keystone.*:ALL,GRANT"
 
 - name: Install packages
@@ -33,7 +34,7 @@
 - name: Populate the Identity service database
   command: keystone-manage db_sync
   become: yes
-  become: keystone
+  #become: keystone
 
 - include: setup_key.yml
 
@@ -47,7 +48,7 @@
 
 - name: Configure ServerName in /etc/apache2/apache2.conf
   lineinfile:
-    dest: /etc/httpd/conf/httpd.conf
+    dest: /etc/apache2/apache2.conf
     line: "ServerName controller"
     state: present
 

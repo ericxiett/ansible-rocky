@@ -3,8 +3,9 @@
 - name: Create the service project
   os_project:
     cloud: rocky-own
+    #endpoint_type: admin
     state: present
-    name: ‘{{ item.name }}’
+    name: '{{ item.name }}'
     description: '{{ item.desc }}'
     domain_id: default
     enabled: True

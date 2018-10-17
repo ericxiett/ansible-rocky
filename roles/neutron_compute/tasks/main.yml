@@ -88,4 +88,4 @@
     enabled: yes
   with_items:
     - nova-compute
-    - neutron-linuxbridge-agent
+    - neutron-openvswitch-agent

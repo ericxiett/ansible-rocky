@@ -14,6 +14,8 @@
   mysql_user:
     name: nova
     password: '{{ ansible_ssh_pass }}'
+    host: "%"
+    append_privs: true
     priv: "{{ item }}.*:ALL,GRANT"
   with_items:
     - nova_api
@@ -63,6 +65,13 @@
     - public
     - admin
     - internal
+- name: Create the placement service entity
+  os_keystone_service:
+    cloud: rocky-own
+    state: present
+    name: placement
+    service_type: placement
+    description: OpenStack Placement API Service
 
 - name: Create placement API endpoint
   os_keystone_endpoint:

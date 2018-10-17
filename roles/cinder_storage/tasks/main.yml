@@ -11,7 +11,7 @@
 - name: Create cinder-volumes vg
   lvg:
     vg: cinder-volumes
-    pvs: /dev/vdb
+    pvs: /dev/vdc
 
 - name: Install cinder packages
   apt:

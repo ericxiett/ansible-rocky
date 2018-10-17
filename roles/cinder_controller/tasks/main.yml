@@ -9,6 +9,7 @@
   mysql_user:
     name: cinder
     password: '{{ ansible_ssh_pass }}'
+    host: "%"
     priv: "cinder.*:ALL,GRANT"
 
 - name: Create user in keystone

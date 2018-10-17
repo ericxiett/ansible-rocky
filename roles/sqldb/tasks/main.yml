@@ -35,8 +35,8 @@
 
 - name: Configure mysql for easy access as root user
   template:
-    src: .my.cnf.j2
-    dest: ~/.my.cnf
+    src: my.cnf.j2
+    dest: ~/my.cnf
     owner: root
     group: root
     mode: 0644
@@ -54,6 +54,6 @@
 
 - name: Restart mariadb service
   service:
-    name: mariadb
+    name: mysql
     state: restarted
     enabled: yes

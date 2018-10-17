@@ -9,6 +9,7 @@
   mysql_user:
     name: neutron
     password: '{{ ansible_ssh_pass }}'
+    host: "%"
     priv: "neutron.*:ALL,GRANT"
 
 - name: Create neutron user in keystone
@@ -145,7 +146,7 @@
     option: '{{ item.option }}'
     value: '{{ item.value }}'
   with_items:
-    - { section: DEFAULT, option: interface_driver, value: linuxbridge }
+    - { section: DEFAULT, option: interface_driver, value: openvswitch }
 
 - name: Config dhcp_agent.ini
   ini_file:
@@ -154,7 +155,7 @@
     option: '{{ item.option }}'
     value: '{{ item.value }}'
   with_items:
-    - { section: DEFAULT, option: interface_driver, value: linuxbridge }
+    - { section: DEFAULT, option: interface_driver, value: openvswitch }
     - { section: DEFAULT, option: dhcp_driver, value: 'neutron.agent.linux.dhcp.Dnsmasq' }
     - { section: DEFAULT, option: enable_isolated_metadata, value: true }
 
@@ -200,7 +201,7 @@
   with_items:
     - nova-api
     - neutron-server
-    - neutron-linuxbridge-agent
+    - neutron-openvswitch-agent
     - neutron-dhcp-agent
     - neutron-metadata-agent
     - neutron-l3-agent
