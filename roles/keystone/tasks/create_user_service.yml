@@ -3,7 +3,6 @@
 - name: Create the service project
   os_project:
     cloud: rocky-own
-    #endpoint_type: admin
     state: present
     name: '{{ item.name }}'
     description: '{{ item.desc }}'

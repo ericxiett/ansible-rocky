@@ -39,13 +39,13 @@
   tags:
     - memcache
 
-- name: Install etcd
-  hosts: controller
-  remote_user: root
-  roles:
-    - etcd
-  tags:
-    - etcd
+#- name: Install etcd
+#  hosts: controller
+#  remote_user: root
+#  roles:
+#    - etcd
+#  tags:
+#    - etcd
 
 - name: Install keystone
   hosts: controller

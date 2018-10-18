@@ -45,7 +45,7 @@
     state: present
     service: cinderv2
     endpoint_interface: '{{ item }}'
-    url: http://controller:8776/v2/%\(project_id\)s
+    url: http://controller:8776/v2/%(project_id)s
     region: RegionOne
   with_items:
     - public
@@ -58,7 +58,7 @@
     state: present
     service: cinderv3
     endpoint_interface: '{{ item }}'
-    url: http://controller:8776/v3/%\(project_id\)s
+    url: http://controller:8776/v3/%(project_id)s
     region: RegionOne
   with_items:
     - public
